@@ -282,12 +282,6 @@ Todos os métodos CRUD seguem a mesma estrutura:
 
 ---
 
-## 📄 Licença
-
-Este projeto está licenciado sob a **MIT License** — veja o ficheiro [LICENSE](LICENSE) para detalhes.
-
----
-
 ## 👤 Autor
 
 - **Gonçalo Alegria** — a22408663 — [@goncaloalegria](https://github.com/goncaloalegria)
