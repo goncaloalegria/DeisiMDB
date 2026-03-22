@@ -284,7 +284,7 @@ Todos os métodos CRUD seguem a mesma estrutura:
 
 ## 👤 Autor
 
-- **Gonçalo Alegria** — a22408663 — [@goncaloalegria](https://github.com/goncaloalegria)
+- **Gonçalo Alegria** — [@goncaloalegria](https://github.com/goncaloalegria)
 
 ---
 
