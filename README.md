@@ -1,261 +1,301 @@
-# Código exemplo para deisIMDB 
+# 🎬 deisIMDB — Base de Dados de Cinema
 
-## File Tree
+[![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.java.com/)
+[![MSSQL](https://img.shields.io/badge/MS_SQL_Server-CC2927?style=for-the-badge&logo=microsoftsqlserver&logoColor=white)](https://www.microsoft.com/sql-server)
+[![JDBC](https://img.shields.io/badge/JDBC-007396?style=for-the-badge&logo=java&logoColor=white)](#-arquitetura)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 
-<pre>
-│   
-│   DEISI_DB_2025.code-workspace
-│   README.md
-│   
-├───images
-│       image-1.png
-│       image-2.png
-│       image-3.png
-│       image.png
-│       output.png
-│       
-├───lib
-│       mssql-jdbc-13.2.1.jre11-javadoc.jar
-│       mssql-jdbc-13.2.1.jre11-sources.jar
-│       mssql-jdbc-13.2.1.jre11.jar
+**Aplicação Java com ligação a base de dados MS-SQL para gestão de informação cinematográfica (atores, filmes, géneros e votos)**
+
+[Descrição](#-descrição) •
+[Funcionalidades](#-funcionalidades) •
+[Arquitetura](#-arquitetura) •
+[Instalação](#-instalação) •
+[Utilização](#-utilização) •
+[API de Classes](#-api-de-classes)
+
+---
+
+## 📋 Descrição
+
+O **deisIMDB** é um projeto académico que demonstra a integração entre **Java** e **bases de dados relacionais** (MS-SQL Server) através de JDBC. A aplicação permite gerir informação cinematográfica — atores, realizadores, filmes, géneros e votos — utilizando operações **CRUD**, chamadas a **Stored Procedures** e **funções escalares/vetoriais**.
+
+O projeto serve como exemplo prático dos conceitos estudados nas unidades curriculares de **Algoritmos e Estruturas de Dados** e **Bases de Dados**, aplicando padrões como o **DAO (Data Access Object)** para separar a lógica de acesso a dados da lógica de negócio.
+
+---
+
+## ✨ Funcionalidades
+
+| Funcionalidade | Descrição |
+|---|---|
+| 📥 **Importação de Dados** | Carregamento em massa via CSV com `bcp` (bulk copy) |
+| ➕ **Inserir Ator** | Criação de novo ator com suporte a *undelete* (reativação) |
+| 📋 **Listar Atores** | Listagem de todos os atores ativos na base de dados |
+| ✏️ **Atualizar Ator** | Edição dos dados de um ator existente |
+| 🗑️ **Eliminar Ator** | Eliminação lógica (*soft delete*) via trigger na base de dados |
+| 🔍 **Verificar Existência** | Chamada a função escalar para validar IDs |
+| 📊 **Funções Vetoriais** | Consultas que devolvem tabelas completas |
+| 🔄 **Undelete** | Reativação de registos eliminados através de Stored Procedure |
+
+---
+
+## 🏗️ Arquitetura
+
+O projeto segue o padrão **DAO** para isolar o acesso a dados, com uma classe centralizada de ligação à base de dados.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                        Main.java                         │
+│                                                          │
+│   Interface de utilizador · Menus · Execução de funções  │
+└────────────┬────────────────────────┬────────────────────┘
+             │                        │
+             ▼                        ▼
+┌────────────────────┐    ┌────────────────────┐
+│     Actor.java     │    │    Result.java     │
+│                    │    │                    │
+│ • CRUD completo    │    │ • Apresentação de  │
+│ • insertDB()       │    │   resultados       │
+│ • updateDB()       │    │                    │
+│ • deleteDB()       │    └────────────────────┘
+│ • Construtores     │
+│   com SELECT       │
+└────────┬───────────┘
+         │
+         ▼
+┌────────────────────┐       ┌─────────────────────────────┐
+│     Dao.java       │──────►│      MS-SQL Server           │
+│                    │ JDBC  │                               │
+│ • getConnection()  │       │ • Tabelas (actors, movies…)  │
+│ • Credenciais      │       │ • Stored Procedures          │
+│ • Config servidor  │       │ • Triggers (soft delete)     │
+│                    │       │ • Funções escalares/vetoriais │
+└────────────────────┘       └─────────────────────────────┘
+```
+
+### Decisões de Design
+
+- **Classe `Dao`** centraliza credenciais e configuração de ligação, evitando repetição e reduzindo erros
+- **Classe `Actor`** encapsula dados e operações CRUD — cada método acede à BD através do `Dao` instanciado no construtor
+- **Prepared Statements** com *placeholders* (`?`) para prevenir SQL injection e garantir tipagem segura
+- **Soft delete** via trigger SQL — atores com filmes associados são desativados em vez de eliminados
+- **Undelete** via Stored Procedure — reinserção de um ator inativo reativa o registo original
+
+---
+
+## 📁 Estrutura do Projeto
+
+```
+deisIMDB/
+├── README.md
+├── DEISI_DB_2025.code-workspace
 │
-├───sql
-│       DDL.sql
-│       deisIMDB.sql
+├── images/                          # Imagens de suporte ao README
 │
-├───src
-│   └───pt
-│       └───ulusofona
-│           └───aed
-│               └───deisimdb
-│                       Actor.java
-│                       Dao.java
-│                       Main.java
-│                       Result.java
-│                       TipoEntidade.java
+├── lib/                             # Bibliotecas externas
+│   ├── mssql-jdbc-13.2.1.jre11.jar
+│   ├── mssql-jdbc-13.2.1.jre11-sources.jar
+│   └── mssql-jdbc-13.2.1.jre11-javadoc.jar
 │
-└───test-files
-    └───demoFiles
-            actors.csv
-            directors.csv
-            genres.csv
-            genres_movies.csv
-            movies.csv
-            movie_votes.csv
-</pre>
-Onde:<br>
-**images**: Contém apenas as imagens de suporte a este ficheiro README<br>
-**lib**: Contém as bibiotecas necessárias para executar o exemplo (e.g. JDBC de SQL)<br>
-&emsp;&nbsp;&nbsp;&nbsp;Dependendo do IDE utilziado, pode ser necessário registar as bibliotecas<br>
-**sql**: scritps de SQL para criar o ambiente de testes<br>
-- **DDL.sql**: Scripts para criar a estrutura de dados necessária à importação de dados<br>
-            &emsp;&emsp;&emsp;&emsp;Scripts para importação de dados<br>
-            &emsp;&emsp;&emsp;&emsp;NOTA: <br>
-            &emsp;&emsp;&emsp;&emsp;os scripts são executados em linha de comandos  (_powershell_ em windows, _terminal_ em MacOS ou _Cli/Bash_ em Linux) , não em SQL.<br>
-            &emsp;&emsp;&emsp;&emsp;Mais informações abaixo na secção de [preparação do ambiente](#preparação-do-ambiente)<br>
-- **deisIMDB.sql**: Scripts para criar os objectos especificos chamados pelo código de exemplo
-            disponibilizado<br>
+├── sql/                             # Scripts SQL
+│   ├── DDL.sql                      # Criação de tabelas + comandos de importação
+│   └── deisIMDB.sql                 # Stored Procedures e funções
+│
+├── src/pt/ulusofona/aed/deisimdb/   # Código fonte
+│   ├── Main.java                    # Interface de utilizador e menus
+│   ├── Dao.java                     # Ligação à base de dados (DAO pattern)
+│   ├── Actor.java                   # Modelo + operações CRUD
+│   ├── Result.java                  # Apresentação de resultados
+│   └── TipoEntidade.java           # Enumerado de tipos de entidade
+│
+└── test-files/demoFiles/            # Ficheiros CSV para importação
+    ├── actors.csv
+    ├── directors.csv
+    ├── genres.csv
+    ├── genres_movies.csv
+    ├── movies.csv
+    └── movie_votes.csv
+```
 
-**src\pt\ulusofona\aed\deisimdb**: código fonte da solução<br>
-**test-files**: ficheiros com dados de trabalho<br>
+---
 
-## Preparação do ambiente
+## 💻 Instalação
 
-A organização de ficheiros segue uma estrutura de projecto trabalhado em VSCode, incluindo ficheiro _workspace_ com configurações (***DEISI_DB_2025.code-workspace***). O exemplo pode ser utilizado qualquer IDE de JAVA desde que se apliquem todas as regras adequadas ao contexto de trabalho (e.g. configuração de debug e compilação, etc.).<br>
-O exemplo está preparado para executar sobre uma base de dados criada de raiz - ***deisIMDB*** - no servidor utilizado nas aulas práticas. Também aqui, pode ser utilisado outro ambiente, com o cuidado de efectuar a adaptação necessária, nomeadamente no tocante a credenciais
-A dase de dados é criada em DDL.sql, conforme se indica no ponto 5. abaixo
+### Pré-requisitos
 
-Para executar o código Java no VSCode, será necessário instalar as seguintes extensões:
-- Extension Pack for Java, da Microsoft (instala 6 extensões)<br>
-    <img src="images\image.png" alt="Microsoft Java Extension Pack" width="30%"><br>
-- Language Support for Java (tm), Red Hat<br>
-    <img src="images\image-1.png" alt="Red Hat Language Support for Java" width="35%"><br>
-Opcionalmente, também se pode instalar os módulos<br>
-- Java, Oracle Corporation<br>
-    <img src="images\image-2.png" alt="Java, Oracle" width="35%"><br>
-  Esta última não é necessária para executar o código mas melhora o intelissense<br>
+| Requisito | Descrição |
+|---|---|
+| **Java JDK 11+** | Runtime e compilação |
+| **Docker** | Para o servidor MS-SQL (ou servidor alternativo) |
+| **IDE** | VSCode (recomendado), IntelliJ, Eclipse, etc. |
+| **JDBC Driver** | Incluído em `lib/` (mssql-jdbc-13.2.1) |
 
-Para preparar o ambiente, executar as seguites acções:
-1. Criar um novo projecto de JAVA em VSCode<br>
-    Caso se utilize outro IDE, é necessário garantir que se consegue executar comandos SQL sobre um servidor MSSQL
-2. Importar os ficheiros para o projecto de modo que a estrutura de pasta fique com a configuração indicada na [File Tree](#file-tree)
-3. Abrir o ficheiro DDL.sql
-4. Abrir ligaçao a servidor SQL com credenciais adequadas
-    Caso o ambiente docker disponibilizado para as aulas práticas não tenha sido alterado, utilizar as indicações de configuração de ambiente de trabalho das aulas práticas existente em <a href="<https://moodle.ensinolusofona.pt/mod/book/view.php?id=20951">Moodle</a>. <br>
-    Caso se esteja a utiliza outro servidor de dados, utilizar dados de ligação e credenciais apropriadas
-5. Executar os comandos do script SQL<br>
-    Os comandos podem ser executados isoladamente ou em conjunto
-    No final, verificar se todas as tabelas foram criadas consultando o INFORMATION_SCHEMA
-6. Executar os comandos de importação de dados 
-    Os comando de importação - *docker run -rm...* - são executados em terminal (_powershell_ em windows, _terminal_ em MacOS ou _Cli/Bash_ em Linux) e não em cliente de SQL, sempre na pasta onde se encontram os ficheiros csv:<br>
-    1. Abrir uma janela de terminal, pode ser no terminal embutido do IDE ou no sistema operativo
-    2. Navegar até à pasta onde estão os ficheiros CSV
-       Caso se mantenha a estrutura de pastas do exemplo, o caminho será **(...)\DEISI_DB_2025\test-files\demofiles**<br>
-    3. Executar os comandos de importação:<br>
-       Exemplo:<br>
-       ***docker run --rm -v ${PWD}:/work --entrypoint /opt/mssql-tools18/bin/bcp mcr.microsoft.com/mssql/server:2022-latest deisIMDB.dbo.movies in /work/movies.csv -S host.docker.internal,1433 -U sa -P "YourStrong!Passw0rd" -u -c -t "," -r "\n\r" -F 1***<br>
-       **A importação pode ter erros** em resultado da codificação de ficheiros, particularmente do fim de linha<br>
-       Caso ocorra um erro de caracter não reconhecido na importação, alterar a codificação (*encoding*) do ficheiro, que pode ser efectuada no próprio VSCode ou na maioria dos editores de texto
-       1. Abrir o ficheiro no VSCode
-       2. Seleccionar o controlo de codificação no canto inferior direito:
-          ![alt text](images\image-3.png)
-        3. Alterar a codificação conforme necessário 
-        4. Gravar o ficheiro alterado
-        4. O parametro *-r* do comando de importação tem que ser ajustado em concordância:
-        - **CRLF** -> *-r "\n\r"*
-        - **LF** -> *-r "\n"*
-    4. Em caso de erro, pode-se acrescentar os parametros ***-m 1 -e /work/bcp_errors.log***<br>
-       Esta opção no comando irá gerar um ficheiros ***bcp_errors.log*** com informação detalhada de eventuais erros que possam ter ocorrido na importação<br>
+### 1. Clonar o Repositório
 
-    No final, verificar se todos os dados foram importado correctamente utilizando comandos SELECT
+```bash
+git clone https://github.com/goncaloalegria/deisIMDB.git
+cd deisIMDB
+```
 
-## Código fonte
+### 2. Configurar o IDE (VSCode)
 
-Ficheiros
-- **[Dao.java](#classe-dao)** <span style="font-size:66%">(clicar no nome do ficheiros para ver detalhes da classe)</span> <br>
-  Classe com especificações para ligar a base de dados
-  Para simplificação do código e segurança, utiliza-se esta classe para centralizar o código próprio para ligaçao a base de dados, facilitando a leitura e compreenção do processo.
-  A cada método que acede à base de dados, é instanciando um objecto desta classe, evitando a repetição de código e riscos de erros sintáticos
-- **[Actor.java](#classe-actor)** <span style="font-size:66%">(clicar no nome do ficheiros para ver detalhes da classe)</span><br>
-  Classe de definição de actor
-  Contém atributos de actor e métodos de exemplificação de ligação a base de dados (CRUD)
-  No âmbito do exemplo, os atributos mapeiam directamente os dados obtidos da importação dos ficheiros CSV, acrescendo-se apenas um atributo de estado necessário para implementação do comportamento de ***"undelete"*** (desactivar registos em vez de os eliminar)
-  Explicação em detalhe mais abaixo
-- **Main.java** <br>
-  Classe principal de aplicações estáticas de Java
-  Faz a interface de utilizador e executa as funções de calculo
-- **Result.java** <br>
-  Classe para apresentação de resultados de cada funcionalidade da aplicação
-- **TipoEntidade.java** <br>
-  Enumerado com as classes utilizaveis na aplicação
+Instalar as seguintes extensões:
 
-## Principais Classes de exemplo: 
-<img src="images\output.png" alt="Diagrama de Classes" width="40%"><br>
+| Extensão | Autor | Obrigatória |
+|---|---|---|
+| **Extension Pack for Java** | Microsoft | Sim |
+| **Language Support for Java** | Red Hat | Sim |
+| **Java** | Oracle | Opcional (melhora IntelliSense) |
 
-### Classe: DAO
-A classe tem com atributos os elementos necessários para realizar a ligaçao a uma base de dados MS-SQL:
-    sqlserver: endereço do servidor
-    databaseName: nome da base de dados para a ligação
-    user: nome de utilizador
-    password: palavra-passe de [user]
-    encrypt: definição de encriptação da ligação ([default]true/false)
-    trustServerCertificate: Confiabilidade do certificado de utilizador
+> Para outros IDEs, garantir que as bibliotecas em `lib/` estão registadas no classpath e que é possível executar comandos SQL sobre MS-SQL.
 
-O método getConnection() devolve um objecto de ligaçao a base de dados com as caracteristicas definidas na classe
+### 3. Criar a Base de Dados
 
-Os parametros da classe correspondem aos da instalação base utilizada nas aulas, mas pode ser criada um construtor em *overload* caso se pretenda que o objecto seja criado com caracteristicas diferentes dos iniciais ou mesmo com parametros definidos na instanciação
+```sql
+-- 1. Abrir ligação ao servidor SQL com credenciais adequadas
+-- 2. Executar os comandos do ficheiro DDL.sql
+-- 3. Verificar criação:
+SELECT * FROM INFORMATION_SCHEMA.TABLES
+```
 
-### Classe: Actor
-A classe utiliza dois construtores:<br>
-*Actor(int actorId, String actorName, char actorGender, int movieId)*<br>
-- Cria um novo objecto com dados inseridos pelo utilizador <br>
+### 4. Importar Dados CSV
 
-*Actor(int actorId)*<br>
-- Carrega o actor da base de dados, a partir o seu id
+Os comandos de importação são executados em **terminal** (PowerShell / Terminal / Bash), **não em cliente SQL**. Navegar até `test-files/demoFiles/` e executar:
 
-O principal objectivo desta classe é demonstrar o acesso a bases de dados utilizando uma linguagem de programação, no caso, o **JAVA**<br>
-Para este efeito, apresentam-se quatro métodos para demonstrar as acções base de operação com uma base de dados, normalmente designadas por ***CRUD*** ou ***Create, Read, Update*** e ***Delete***<br>
-Os métodos em questão são:<br>
-**CREATE** <span style="font-size:66%">(INSERT)</span>: *insertDB()*<br>
-- Insere o actor na base de dados. Não utiliza argumentos por ser um método interno da classe<br>
-No código apresentam-se dois exemplos de inserção: um com **INSERT** simples (comentado), que representa a forma mais convencional e comum de inserção em base de dados; outro com chamada - ***CALL*** - a procedimento para lidar com actores inactivos. Caso o utilizador não exista, é inserido; caso exista mas esteja oculto/inactivo, o procedimento limita-se a reactivá-lo. [ver a descrição do exemplo para mais detalhes](#utilização-de-exemplos). <br>
-A versão comentada é mantida para maior abrangência do exemplo, servindo para demonstrar a operação de escrita básica em base de dados<br>
-No mesmo sentido, a versão com a chamada a procedimento serve para demonstrar a utilização de procedimentos de SQL (***Stored Procedures***) a partir de programação Java
+```bash
+docker run --rm -v ${PWD}:/work \
+  --entrypoint /opt/mssql-tools18/bin/bcp \
+  mcr.microsoft.com/mssql/server:2022-latest \
+  deisIMDB.dbo.movies in /work/movies.csv \
+  -S host.docker.internal,1433 \
+  -U sa -P "YourStrong!Passw0rd" \
+  -u -c -t "," -r "\n\r" -F 1
+```
 
-**READ** <span style="font-size:66%">(SELECT)</span>: *Actor(int actorId)*<br>
-- Método constructor já referido anteriormente, responsável por ler os dados de um actor a partir da base de dados
+> Repetir para cada ficheiro CSV (`actors.csv`, `directors.csv`, `genres.csv`, etc.), ajustando o nome da tabela e do ficheiro.
 
-**UPDATE**: *updateDB()*
-- Actualiza o actor na base de dados. Não utiliza argumentos por ser um método interno da classe<br>
-Note-se que o método escreve todos os atributos do actor, mesmo que não tenha sido alterados. Identificar alterações implicaria maior complexidade no código sem qualquer ganho em termos de desempenho, pelo contrário.
+### 5. Criar Objetos SQL
 
-**DELETE**: *deleteDB()*
-- Apaga o actor na base de dados. Não utiliza argumentos por ser um método interno da classe<br>
-Conforme indicado no comentário do método (no código), a base de dados tem um *trigger* que *transforma* a eliminação - ***delete*** - na inactivação do actor, não o apagando efectivamente, processo vulgarmente designado por ***UNDELETE***<br>
-De modo a garantir a integridade e coerencia de dados, este mesmo *trigger* **só elimina actores caso <u>não tenham filmes associados</u>**
+Executar o script `sql/deisIMDB.sql` para criar as Stored Procedures e funções utilizadas pela aplicação.
 
-Todos os métodos utilizam estrutura base para ligação a base de dados:
+---
 
-1. Variavel *Dao*, que é um atributo da classe instanciado nos construtores
-2. *String* com comando a executar na base de dados<br>
-A string utiliza ***placeholder*** (caracter '**?**') para posicionar parametros a utilizar na chamada à base de dados<br>
-De notar que se utiliza sintaxe do Java e não de SQL, embora nalguns casos seja igual
-3. Variavel do tipo *Connection* responsável pela ligação à base de dados<br>
-Esta variavel é instanciada a partir do dao da classe<br>
-4. Preparação da instrução (e.g. ***PreparedStatement***), que pode ter variações consoante a instrução a executar
-5. Definição de parametros, por substituição dos ***placeholder*** <br>
-Instrução do ***statement.set\[tipo](«ordem»,«valor»)*** onde:<br>
-**tipo** identifica o tipo da variavel a atribuir ao parametro<br>
-**ordem** indica a ordem ***placeholder*** na *String* de SQL<br>
-**valor** é o valor do parametro na chamada à base de dados
-6. Execução da instrução com comando do tipo ***statement.execute\[acção]()***<br>
-**acção** pode ser diferente consoante a instrução realizada<br>
-Caso se pretenda utilizar dados devolvidos pela base de dados, terá que se atribuir os resultados da execução da instrução numa variavel local do tipo ***resultSet***
-7. Reter os valores que possam ter sido devolvidos pela base de dados utilzando uma instrução<br> ***«variave_local» = resultSet.get\[tipo]("«nome:coluna»");***<br>
-Este formato apenas funciona com comando ***executeQuery***
+## 🔧 Resolução de Problemas na Importação
 
-## Outros exemplos de utilização de código SQL
-### Chamada a função escalar (devolve apenas um valor)
-***actorExists(int actorID)*** <span style="font-size:66%">(linha 98 no ficheiro Main.java)</span><br>
-**Principais caracateristicas**<br>
-1. A instrução de chamada à função tem um ***placeholder*** para receber o resultado da função
-2. O registo do parametro que recebe o resultado é efectuado com ***registerOutParameter*** e não com **set\[tipo]**
-3. O tipo de dados de retorno é definido como parametro ***registerOutParameter***
-### Chamada a função vectorial (devolve uma tabela)
-***listaActores()*** <span style="font-size:66%">(linha 170 no ficheiro Main.java)</span><br>
-**Principais caracateristicas**<br>
-1. Sendo o resultado uma tabela, a estrutura base da chamada é igual ao que acontece com um *SELECT* convencional descrito anteriormente no exemplo de ***READ*** de **CRUD**
-2. Utiliza-se um ciclo ***While*** para iterar sobre o ***resultSet*** 
-3. A iteração é efectuada pelo método ***next()*** do próprio ***resultSet*** 
-### Chamada a um procedimento
-***insertDB()*** <span style="font-size:66%">(linha 107 no ficheiro Actor.java)</span><br>
-**Principais caracateristicas**<br>
-\-- descrito anteriormente no exemplo ***INSERT*** de **CRUD** \--
-### Tratamento de erros
-Todas as funções e procedimentos do exemplo utilizam estruturas básicas ***TRY ... CATCH***, em sintaxe Java, para os acessos a base de dados<br>
-**IMPORTANTE**<br>
-Ter em contao modo de tratamento de erros e alerta de eventos do SQL, conforme estudado em aula<br>
-Java e SQL executam em ambitos diferentes e com tratamento de excepções e erros inteiramente independentes, pelo que falhas na comunicação de eventos podem gerar comportamentos idesejados
-Também se deve ter em conta que excepções geradas programáticamente por aplicação de regras de negócio ou requisitos funcionais têm tratamento diferente das que são geradas por erro de execução 
+| Problema | Solução |
+|---|---|
+| Erro de carácter não reconhecido | Alterar encoding do CSV no VSCode (canto inferior direito) |
+| Encoding **CRLF** | Usar parâmetro `-r "\n\r"` |
+| Encoding **LF** | Usar parâmetro `-r "\n"` |
+| Erros genéricos de importação | Adicionar `-m 1 -e /work/bcp_errors.log` para gerar log detalhado |
+| Dados não aparecem após importação | Verificar com `SELECT COUNT(*) FROM [tabela]` |
 
-## Utilização do exemplo demonstratico
+---
 
-O exemplo disponibilizado inclui referência todas as funções solicitadas no projecto base de AED, mas também algumas que se pode antecipar que venham a ser desenvolvidas na cadeira de Base de Dados.
-Todas estas funcionalidades são listadas em menus de opções, carregado no lançamento da aplicação ou sempre que se seleccionar a opção "Help", mas apenas algumas estão implementadas, apenas as necessárias para exemplificação de acesso a bases de dados utilizando Java.
-Assim, as opções com o prefixo '*' não estão desenvolvidas
+## 📱 Utilização
 
-Para os melhores resultados do exemplo, os dados já devem estar carregados para a base de dados. Preferencialmente apenas se devem carregar os dados de demonstração, para evitar que a experiência 'danifique' os dados reais a utilizar no projecto
+### Fluxo Recomendado de Teste
 
-O modo mais eficaz para verificar o funcionamento será realizar a seguite chamada de funcionalidades:
+A aplicação apresenta um menu de opções no arranque. Para validar o funcionamento completo, seguir esta sequência:
 
-1. Listar actores **(LISTAR_ACTORES)**<br>
-    A lista deve conter exactamente os actores importados do ficheiro CSV
-2. Inserir dois actores **(INSERT_ACTOR «id»;«name»;«gender»;«movie-id»)**<br>
-   Um dos actore deve ter filme associado; o segundo não tem filme
-   - Pode ser necessário alterar a tabela de actores para aceitar nulos na coluna de filmes
-    A cada actor inserido, a aplicação irá confirmar a sua existência e listar os seus dados
-    No actor duplicado será dada a indicação que já existe, os dados apresentados serão os existentes na base de dados e não o inseridos
-3. Inserir actor duplicado **(INSERT_ACTOR «id»;«name»;«gender»;«movie-id»)**<br>  
-   - Sugestão: duplicar apenas o ID, os restantes dados devem ser diferentes
-    A a aplicação irá confirmar que o actor já existe e listar os seus dados, os dados apresentados serão os existentes na base de dados e não o inseridos
-4. Listar actores **(LISTAR_ACTORES)**<br>
-    A lista deve conter os dois novos actores inseridos, sem alteraçoes no dulicado
-5. Alterar um actor **(UPDATE_ACTOR «id»;«name»;«gender»;«movie-id»)**<br>
-   - Sugestão: alterar o actor da duplicaçao em 2
-    A aplicaçao confirma existência e apresenta dados actualizado
-6. Alterar um actor inexistente **(UPDATE_ACTOR «id»;«name»;«gender»;«movie-id»)**<br>
-    Indicação de actor inexistente
-7. Eliminar os dois actores inseridos em 2 **(APAGAR_ACTOR «id»)**<br>
-    A cada actor, a aplicaçao confirma a eliminação sem diferenças visiveis  
-8. Listar actores **(LISTAR_ACTORES)**<br>
-    Nenhum do dois actores eliminados é apresentado
-9. Numa sessão de SQL, consultar a tabela de actores (este teste não é realizado na aplicação JAVA)
-    O actor com filme associado deve estar inactivo (isActive = 0) mas existe na tabela.
-    O actor sem filme associado não será listado
-10. Inserir novamente o actor eliminado **(INSERT_ACTOR «id»;«name»;«gender»;«movie-id»)**<br>
-    - Apenas interessa o actor com filme associado
-    A aplicação informa que o actor já existe e que o irá carregar da base de dados, informação semelhante à apresentada numa inserção de raiz
-11. Listar actores **(LISTAR_ACTORES)**<br>
-    O actor 'activado' é apresentado na lista
-12. Numa sessão de SQL, consultar a tabela de actores (este teste não é realizado na aplicação JAVA)
-    O actor 'inserido' estará activo (isActive = 1) na tabela.
+| Passo | Comando | Resultado Esperado |
+|---|---|---|
+| 1 | `LISTAR_ACTORES` | Lista com os atores importados do CSV |
+| 2 | `INSERT_ACTOR id;name;gender;movie-id` | Confirmação + dados do novo ator |
+| 3 | `INSERT_ACTOR` (ID duplicado) | Aviso de existência + dados originais da BD |
+| 4 | `LISTAR_ACTORES` | Novos atores na lista, duplicado inalterado |
+| 5 | `UPDATE_ACTOR id;name;gender;movie-id` | Confirmação + dados atualizados |
+| 6 | `UPDATE_ACTOR` (ID inexistente) | Aviso de ator inexistente |
+| 7 | `APAGAR_ACTOR id` | Confirmação de eliminação |
+| 8 | `LISTAR_ACTORES` | Atores eliminados não aparecem |
+| 9 | *(SQL direto)* `SELECT * FROM actors` | Ator com filme: `isActive = 0`. Ator sem filme: removido |
+| 10 | `INSERT_ACTOR` (ator eliminado) | Reativação automática (*undelete*) |
+| 11 | `LISTAR_ACTORES` | Ator reativado visível na lista |
+
+> Opções com prefixo `*` no menu ainda não estão implementadas.
+
+---
+
+## 🔌 API de Classes
+
+### `Dao`
+
+Centraliza a configuração de ligação à base de dados.
+
+| Atributo | Descrição |
+|---|---|
+| `sqlserver` | Endereço do servidor |
+| `databaseName` | Nome da base de dados |
+| `user` / `password` | Credenciais de acesso |
+| `encrypt` | Encriptação da ligação |
+| `trustServerCertificate` | Confiança no certificado |
+
+| Método | Descrição |
+|---|---|
+| `getConnection()` | Devolve um objeto `Connection` JDBC configurado |
+
+### `Actor`
+
+Modelo de dados com operações CRUD integradas.
+
+| Método | Operação CRUD | Descrição |
+|---|---|---|
+| `Actor(id, name, gender, movieId)` | — | Construtor com dados do utilizador |
+| `Actor(id)` | **READ** | Carrega ator da BD por ID |
+| `insertDB()` | **CREATE** | Insere ator (ou reativa via Stored Procedure) |
+| `updateDB()` | **UPDATE** | Atualiza todos os atributos na BD |
+| `deleteDB()` | **DELETE** | Soft delete via trigger (desativa se tem filmes) |
+
+### Padrão de Acesso à BD
+
+Todos os métodos CRUD seguem a mesma estrutura:
+
+```
+1. Instanciar Dao
+2. Definir String SQL com placeholders (?)
+3. Obter Connection via dao.getConnection()
+4. Criar PreparedStatement
+5. Definir parâmetros → statement.set[Tipo](ordem, valor)
+6. Executar → statement.execute[Ação]()
+7. (Opcional) Ler resultados via ResultSet
+```
+
+---
+
+## 📊 Exemplos de SQL em Java
+
+| Tipo | Método | Características |
+|---|---|---|
+| **Função Escalar** | `actorExists(id)` | Placeholder para resultado, `registerOutParameter` em vez de `set[Tipo]` |
+| **Função Vetorial** | `listaActores()` | Estrutura igual a SELECT, iteração com `while(resultSet.next())` |
+| **Stored Procedure** | `insertDB()` | Chamada com `CALL`, lida com inserção e reativação |
+| **Tratamento de Erros** | Todos os métodos | Estrutura `try...catch`; atenção à independência entre exceções Java e SQL |
+
+---
+
+## ⚠️ Notas Importantes
+
+- **Java e SQL executam em âmbitos independentes** — falhas na comunicação de eventos podem gerar comportamentos indesejados
+- **Exceções de regras de negócio** (geradas programaticamente) têm tratamento diferente das exceções de execução
+- Os parâmetros de ligação no `Dao` correspondem à instalação base das aulas; criar construtor em *overload* para configurações diferentes
+- Antes de executar a aplicação, os dados devem estar carregados na BD (preferencialmente apenas os dados de demonstração)
+
+---
+
+## 📄 Licença
+
+Este projeto está licenciado sob a **MIT License** — veja o ficheiro [LICENSE](LICENSE) para detalhes.
+
+---
+
+## 👤 Autor
+
+- **Gonçalo Alegria** — a22408663 — [@goncaloalegria](https://github.com/goncaloalegria)
+
+---
+
+## 🙏 Agradecimentos
+
+- [Universidade Lusófona](https://www.ulusofona.pt/) — Instituição de ensino
+- [Microsoft SQL Server](https://www.microsoft.com/sql-server) — Motor de base de dados
+- [Docker](https://www.docker.com/) — Containerização do ambiente de desenvolvimento
